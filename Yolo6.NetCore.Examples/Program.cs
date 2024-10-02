@@ -9,10 +9,10 @@ namespace Yolo6.NetCore.Examples
         static void Main(string[] args)
         {
             // Single frame / image example.
-            CpuImageExample.Run();
+            //CpuImageExample.Run();
 
             // Web camera example.
-            //CpuCameraExample.Run();
+           CpuCameraExample.Run();
         }
     }
 }

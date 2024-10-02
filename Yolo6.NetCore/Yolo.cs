@@ -94,38 +94,34 @@ namespace Yolo6.NetCore
             return output;
         }
 
-        private Tensor<float> ExtractPixels(Image image)
+        private unsafe Tensor<float> ExtractPixels(Image image)
         {
             var timer = new Stopwatch();
             timer.Start();
 
-            var bitmap = (Bitmap) image;
+            var bitmap = (Bitmap)image;
             var rectangle = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
             var bitmapData = bitmap.LockBits(rectangle, ImageLockMode.ReadOnly, bitmap.PixelFormat);
             var bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+            var tensor = new DenseTensor<float>(new[] { 1, 3, _model.Height, _model.Width });
 
-            var tensor = new DenseTensor<float>(new[] {1, 3, _model.Height, _model.Width});
-
-            // TODO: Find a safe way to do this, maybe using PinnedMemory.NetCore
-            unsafe
+            Parallel.For(0, bitmapData.Height, y =>
             {
-                Parallel.For(0, bitmapData.Height, y =>
+                var data = new Span<byte>((byte*)bitmapData.Scan0, bitmapData.Stride * bitmapData.Height);
+                var row = data.Slice(y * bitmapData.Stride, bitmapData.Width * bytesPerPixel);
+
+                for (int x = 0; x < bitmapData.Width; x++)
                 {
-                    var row = (byte*) bitmapData.Scan0 + y * bitmapData.Stride;
+                    tensor[0, 0, y, x] = row[x * bytesPerPixel + 2] / 255.0F;  // Red
+                    tensor[0, 1, y, x] = row[x * bytesPerPixel + 1] / 255.0F;  // Green
+                    tensor[0, 2, y, x] = row[x * bytesPerPixel + 0] / 255.0F;  // Blue
+                }
+            });
 
-                    Parallel.For(0, bitmapData.Width, x =>
-                    {
-                        tensor[0, 0, y, x] = row[x * bytesPerPixel + 2] / 255.0F;  
-                        tensor[0, 1, y, x] = row[x * bytesPerPixel + 1] / 255.0F;  
-                        tensor[0, 2, y, x] = row[x * bytesPerPixel + 0] / 255.0F;  
-                    });
-                });
-
-                bitmap.UnlockBits(bitmapData);
-            }
+            bitmap.UnlockBits(bitmapData);
 
             timer.Stop();
-            Console.WriteLine($"{timer.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Processing Time: {timer.ElapsedMilliseconds}ms");
 
             return tensor;
         }
