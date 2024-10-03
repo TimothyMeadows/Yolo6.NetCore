@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Text;
 using OpenCvSharp;
 using Yolo6.NetCore.Models;
 
@@ -13,9 +11,17 @@ namespace Yolo6.NetCore.Examples
     {
         public static void Run()
         {
-            var capture = new VideoCapture(0);
+            var capture = new VideoCapture(0); // Open the default camera (index 0)
             using var window = new Window("Camera");
             using var image = new Mat();
+
+            // Initialize YOLO model once outside the loop to avoid reloading the model on every frame
+            using var yolo = new Yolo<YoloCocoModel>("Models/yolov6s.onnx");
+
+            // Pre-create resources to avoid excessive memory allocation
+            var font = new Font("Consolas", 16, GraphicsUnit.Pixel);
+            var pen = new Pen(Color.Blue, 1);
+            var brush = new SolidBrush(Color.White);
 
             while (true)
             {
@@ -23,33 +29,35 @@ namespace Yolo6.NetCore.Examples
                 if (image.Empty())
                     break;
 
-                using var png = image.ToMemoryStream(".png");
-                using var frame = Image.FromStream(png);
+                // Convert Mat to Bitmap for processing (still needed for YOLO input)
+                using var frame = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(image);
 
-                using var yolo = new Yolo<YoloCocoModel>("Models/yolov6s.onnx");
+                // Predict objects using YOLO
                 var predictions = yolo.Predict(frame);
 
+                // Draw predictions on the frame
                 using var graphics = Graphics.FromImage(frame);
                 foreach (var prediction in predictions)
                 {
                     var score = Math.Round(prediction.Score, 2);
-                    graphics.DrawRectangles(new Pen(Color.Blue, 1),
-                        new[] { prediction.Rectangle });
+                    graphics.DrawRectangles(pen, new[] { prediction.Rectangle });
 
                     var (x, y) = (prediction.Rectangle.X - 3, prediction.Rectangle.Y - 23);
-
-                    graphics.DrawString($"{prediction.Label.Name} ({score})",
-                        new Font("Consolas", 16, GraphicsUnit.Pixel), new SolidBrush(Color.White),
-                        new PointF(x, y));
+                    graphics.DrawString($"{prediction.Label.Name} ({score})", font, brush, new PointF(x, y));
                 }
 
-                using var stream = new MemoryStream();
-                frame.Save(stream, ImageFormat.Png);
-                var binary = stream.ToArray();
+                // Convert modified Bitmap back to OpenCvSharp.Mat for display
+                var outputMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(frame);
 
-                window.ShowImage(Mat.FromImageData(binary, ImreadModes.Color));
-                Cv2.WaitKey(30);
+                // Show the processed image in the window
+                window.ShowImage(outputMat);
+                Cv2.WaitKey(30); // Wait for 30 ms between frames
             }
+
+            // Clean up resources
+            font.Dispose();
+            pen.Dispose();
+            brush.Dispose();
         }
     }
 }

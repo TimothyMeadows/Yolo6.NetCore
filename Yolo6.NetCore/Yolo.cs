@@ -14,6 +14,7 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 using Yolo6.NetCore.Extensions;
 using Yolo6.NetCore.Models;
 using System.Buffers;
+using System.Runtime;
 
 namespace Yolo6.NetCore
 {
