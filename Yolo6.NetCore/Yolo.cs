@@ -143,12 +143,39 @@ namespace Yolo6.NetCore
                 }
 
                 // Handle any remaining pixels that didn't fit into SIMD processing
-                for (; x < bitmapData.Width; x++)
+                for (; x < bitmapData.Width; x += 4)
                 {
-                    tensor[0, 0, y, x] = row[x * bytesPerPixel + 2] / 255.0F;  // Red
-                    tensor[0, 1, y, x] = row[x * bytesPerPixel + 1] / 255.0F;  // Green
-                    tensor[0, 2, y, x] = row[x * bytesPerPixel + 0] / 255.0F;  // Blue
+                    if (x + 3 < bitmapData.Width)
+                    {
+                        // Process 4 pixels at once using unrolled loop
+                        tensor[0, 0, y, x] = row[x * bytesPerPixel + 2] / 255.0F;    // Red
+                        tensor[0, 1, y, x] = row[x * bytesPerPixel + 1] / 255.0F;    // Green
+                        tensor[0, 2, y, x] = row[x * bytesPerPixel + 0] / 255.0F;    // Blue
+
+                        tensor[0, 0, y, x + 1] = row[(x + 1) * bytesPerPixel + 2] / 255.0F;
+                        tensor[0, 1, y, x + 1] = row[(x + 1) * bytesPerPixel + 1] / 255.0F;
+                        tensor[0, 2, y, x + 1] = row[(x + 1) * bytesPerPixel + 0] / 255.0F;
+
+                        tensor[0, 0, y, x + 2] = row[(x + 2) * bytesPerPixel + 2] / 255.0F;
+                        tensor[0, 1, y, x + 2] = row[(x + 2) * bytesPerPixel + 1] / 255.0F;
+                        tensor[0, 2, y, x + 2] = row[(x + 2) * bytesPerPixel + 0] / 255.0F;
+
+                        tensor[0, 0, y, x + 3] = row[(x + 3) * bytesPerPixel + 2] / 255.0F;
+                        tensor[0, 1, y, x + 3] = row[(x + 3) * bytesPerPixel + 1] / 255.0F;
+                        tensor[0, 2, y, x + 3] = row[(x + 3) * bytesPerPixel + 0] / 255.0F;
+                    }
+                    else
+                    {
+                        // Handle any remaining pixels one by one (fallback case)
+                        for (; x < bitmapData.Width; x++)
+                        {
+                            tensor[0, 0, y, x] = row[x * bytesPerPixel + 2] / 255.0F;  // Red
+                            tensor[0, 1, y, x] = row[x * bytesPerPixel + 1] / 255.0F;  // Green
+                            tensor[0, 2, y, x] = row[x * bytesPerPixel + 0] / 255.0F;  // Blue
+                        }
+                    }
                 }
+
             });
 
             bitmap.UnlockBits(bitmapData);
