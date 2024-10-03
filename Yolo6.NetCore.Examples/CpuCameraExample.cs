@@ -51,7 +51,7 @@ namespace Yolo6.NetCore.Examples
 
                 // Show the processed image in the window
                 window.ShowImage(outputMat);
-                Cv2.WaitKey(30); // Wait for 30 ms between frames
+                Cv2.WaitKey(1); // Wait for 30 ms between frames
             }
 
             // Clean up resources
