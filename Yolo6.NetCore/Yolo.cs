@@ -95,9 +95,6 @@ namespace Yolo6.NetCore
 
         private unsafe Tensor<float> ExtractPixels(Image image)
         {
-            var timer = new Stopwatch();
-            timer.Start();
-
             var bitmap = (Bitmap)image;
             var rectangle = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
             var bitmapData = bitmap.LockBits(rectangle, ImageLockMode.ReadOnly, bitmap.PixelFormat);
@@ -115,7 +112,7 @@ namespace Yolo6.NetCore
                 var row = new Span<byte>(scan0 + y * bitmapData.Stride, bitmapData.Width * bytesPerPixel);
 
                 int x = 0;
-                Vector<float> scale = new Vector<float>(1 / 255.0f);
+                var scale = new Vector<float>(1 / 255.0f);
                 int simdWidth = Vector<byte>.Count / bytesPerPixel;
 
                 // Process pixels using SIMD where possible
@@ -155,9 +152,6 @@ namespace Yolo6.NetCore
             });
 
             bitmap.UnlockBits(bitmapData);
-            timer.Stop();
-            Console.WriteLine($"Processing Time: {timer.ElapsedMilliseconds}ms");
-
             _tensorPool.Return(tensorBuffer);
 
             return tensor;
